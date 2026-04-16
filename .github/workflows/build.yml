@@ -1,0 +1,23 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Build APK
+        uses: ArtemSBulgakov/buildozer-action@v1
+        with:
+          workdir: .
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: myapp-apk
+          path: bin/*.apk
