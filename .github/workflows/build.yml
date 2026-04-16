@@ -11,10 +11,38 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            python3-pip \
+            build-essential \
+            git \
+            ffmpeg \
+            libsdl2-dev \
+            libsdl2-image-dev \
+            libsdl2-mixer-dev \
+            libsdl2-ttf-dev \
+            libportmidi-dev \
+            libswscale-dev \
+            libavformat-dev \
+            libavcodec-dev \
+            zlib1g-dev \
+            libgstreamer1.0-dev \
+            openjdk-17-jdk \
+            unzip \
+            autoconf \
+            libtool \
+            pkg-config \
+            cmake
+
+      - name: Install buildozer
+        run: |
+          pip3 install --upgrade buildozer cython
+
       - name: Build APK
-        uses: ArtemSBulgakov/buildozer-action@v1
-        with:
-          workdir: .
+        run: |
+          buildozer android debug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
