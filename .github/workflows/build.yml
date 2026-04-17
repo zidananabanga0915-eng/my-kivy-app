@@ -2,72 +2,45 @@ name: Build APK (KivyMD)
 
 on:
   push:
-    branches: ["main"]
-  workflow_dispatch:
+    branches: [ main ]
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
-    timeout-minutes: 60
+    runs-on: ubuntu-latest
 
     steps:
-    # 1. Checkout code
-    - name: Checkout source
-      uses: actions/checkout@v4
+      - name: Checkout source
+        uses: actions/checkout@v4
 
-    # 2. Set Java 17 (THIS FIXES YOUR ERROR)
-    - name: Set up Java 17
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: '17'
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
-    # 3. Cache buildozer (optional but good)
-    - name: Cache buildozer
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.buildozer
-          ~/.gradle
-        key: ${{ runner.os }}-buildozer-${{ hashFiles('**/buildozer.spec') }}
-        restore-keys: |
-          ${{ runner.os }}-buildozer-
+      - name: Install system dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y \
+            python3-pip \
+            build-essential \
+            git zip unzip \
+            openjdk-17-jdk \
+            libffi-dev \
+            libssl-dev \
+            zlib1g-dev
 
-    # 4. Install dependencies
-    - name: Install system dependencies
-      run: |
-        sudo apt update
-        sudo apt install -y \
-          python3-pip \
-          build-essential \
-          git \
-          zip \
-          unzip \
-          openjdk-17-jdk \
-          libffi-dev \
-          libssl-dev
+      - name: Install Buildozer
+        run: |
+          pip install --upgrade pip
+          pip install buildozer cython
 
-    # 5. Install Buildozer
-    - name: Install Buildozer
-      run: |
-        pip install --upgrade pip
-        pip install buildozer cython
+      - name: Build APK (auto accept licenses)
+        run: |
+          yes | buildozer -v android debug
 
-    # 6. Initialize buildozer (safe if exists)
-    - name: Initialize Buildozer
-      run: buildozer init || true
-
-    # 7. ACCEPT LICENSES PROPERLY (FIXED)
-    - name: Accept Android licenses
-      run: yes | buildozer android sdk
-
-    # 8. Build APK
-    - name: Build APK
-      run: buildozer -v android debug
-
-    # 9. Upload APK
-    - name: Upload APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: apk
-        path: bin/*.apk
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk
+          path: bin/*.apk
