@@ -1,4 +1,4 @@
-name: Build APK
+name: Build APK (KivyMD)
 
 on:
   push:
@@ -7,14 +7,31 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 60
 
+    env:
+      ANDROIDAPI: "33"
+      ANDROIDNDK: "25b"
+
     steps:
-      - name: Checkout
+      # 1. Checkout
+      - name: Checkout source
         uses: actions/checkout@v3
 
-      - name: Install system dependencies
+      # 2. Cache Buildozer + SDK (BIG speed boost)
+      - name: Cache buildozer global directory
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.buildozer
+            ~/.gradle
+          key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}
+          restore-keys: |
+            ${{ runner.os }}-buildozer-
+
+      # 3. Install system dependencies
+      - name: Install system packages
         run: |
           sudo apt update
           sudo apt install -y \
@@ -35,14 +52,24 @@ jobs:
             libffi-dev \
             libssl-dev
 
-      - name: Install Buildozer
+      # 4. Install Python tools
+      - name: Install Python dependencies
         run: |
-          pip install --upgrade pip
-          pip install buildozer cython
+          python3 -m pip install --upgrade pip
+          pip install cython==0.29.36 buildozer
 
-      - name: Build APK
+      # 5. Accept Android licenses (prevents silent hangs)
+      - name: Accept Android SDK licenses
+        run: yes | sdkmanager --licenses || true
+
+      # 6. Build APK
+      - name: Build with Buildozer
         run: |
-          buildozer android debug
+          buildozer -v android debug
 
+      # 7. Upload APK artifact
       - name: Upload APK
-        uses
+        uses: actions/upload-artifact@v3
+        with:
+          name: kivy-apk
+          path: bin/*.apk
