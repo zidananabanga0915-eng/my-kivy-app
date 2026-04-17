@@ -2,7 +2,7 @@ name: Build APK (KivyMD)
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   workflow_dispatch:
 
 jobs:
@@ -10,24 +10,30 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 60
 
-    env:
-      ANDROIDAPI: "33"
-      ANDROIDNDK: "25b"
-
     steps:
+    # 1. Checkout code
     - name: Checkout source
       uses: actions/checkout@v4
 
+    # 2. Set Java 17 (THIS FIXES YOUR ERROR)
+    - name: Set up Java 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    # 3. Cache buildozer (optional but good)
     - name: Cache buildozer
       uses: actions/cache@v4
       with:
         path: |
           ~/.buildozer
           ~/.gradle
-        key: ${{ runner.os }}-buildozer-${{ hashFiles('**/*.py') }}
+        key: ${{ runner.os }}-buildozer-${{ hashFiles('**/buildozer.spec') }}
         restore-keys: |
           ${{ runner.os }}-buildozer-
 
+    # 4. Install dependencies
     - name: Install system dependencies
       run: |
         sudo apt update
@@ -41,41 +47,27 @@ jobs:
           libffi-dev \
           libssl-dev
 
+    # 5. Install Buildozer
     - name: Install Buildozer
       run: |
         pip install --upgrade pip
         pip install buildozer cython
 
-    - name: Install Android SDK
-      run: |
-        sudo apt install -y wget tar
-        mkdir -p $HOME/android-sdk
-        cd $HOME/android-sdk
-        wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O tools.zip
-        unzip tools.zip
-        mkdir -p cmdline-tools/latest
-        mv cmdline-tools/* cmdline-tools/latest/ || true
+    # 6. Initialize buildozer (safe if exists)
+    - name: Initialize Buildozer
+      run: buildozer init || true
 
-    - name: Set environment variables
-      run: |
-        echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
-        echo "PATH=$HOME/android-sdk/cmdline-tools/latest/bin:$HOME/android-sdk/platform-tools:$PATH" >> $GITHUB_ENV
-
+    # 7. ACCEPT LICENSES PROPERLY (FIXED)
     - name: Accept Android licenses
-      run: yes | sdkmanager --licenses
+      run: yes | buildozer android sdk
 
-    - name: Install SDK packages
-      run: |
-        sdkmanager "platform-tools" \
-                   "platforms;android-33" \
-                   "build-tools;33.0.0"
-
+    # 8. Build APK
     - name: Build APK
-      run: |
-        yes | buildozer android debug
+      run: buildozer -v android debug
 
+    # 9. Upload APK
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: kivy-apk
+        name: apk
         path: bin/*.apk
