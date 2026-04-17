@@ -2,8 +2,9 @@ name: Build APK
 
 on:
   push:
-    branches: [ "main" ]
-  workflow_dispatch:  # ← This lets you trigger it manually from the GitHub UI
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
   build:
@@ -14,14 +15,13 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build APK with Buildozer
-        id: buildozer
         uses: ArtemSBulgakov/buildozer-action@v1
         with:
-          workdir: .
-          # command defaults to "buildozer android debug" — you can override if needed
+          command: buildozer -v android debug
+          buildozer_version: stable
 
-      - name: Upload APK as artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: my-kivy-app-apk
-          path: ${{ steps.buildozer.outputs.filename }}
+          path: bin/*.apk
