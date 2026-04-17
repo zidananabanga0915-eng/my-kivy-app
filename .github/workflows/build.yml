@@ -3,6 +3,7 @@ name: Build APK
 on:
   push:
     branches: [ "main" ]
+  workflow_dispatch:  # ← This lets you trigger it manually from the GitHub UI
 
 jobs:
   build:
@@ -11,38 +12,16 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Build APK with Buildozer
+        id: buildozer
+        uses: ArtemSBulgakov/buildozer-action@v1
         with:
-          submodules: false
+          workdir: .
+          # command defaults to "buildozer android debug" — you can override if needed
 
-      - name: Set up Java
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Accept Android licenses
-        run: |
-          yes | sdkmanager --licenses || true
-          sdkmanager "build-tools;33.0.2" "platforms;android-33"
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y python3-pip build-essential git unzip zip libssl-dev libffi-dev
-
-      - name: Install buildozer
-        run: |
-          pip3 install --upgrade buildozer cython virtualenv
-
-      - name: Build APK
-        run: |
-          buildozer android debug 2>&1
-
-      - name: Upload APK
+      - name: Upload APK as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: myapp-apk
-          path: bin/*.apk
+          name: my-kivy-app-apk
+          path: ${{ steps.buildozer.outputs.filename }}
