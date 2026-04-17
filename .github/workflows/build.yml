@@ -15,23 +15,20 @@ jobs:
       ANDROIDNDK: "25b"
 
     steps:
-    # 1. Checkout code
     - name: Checkout source
       uses: actions/checkout@v4
 
-    # 2. Cache buildozer (BIG speed boost)
     - name: Cache buildozer
       uses: actions/cache@v4
       with:
         path: |
           ~/.buildozer
           ~/.gradle
-        key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}
+        key: ${{ runner.os }}-buildozer-${{ hashFiles('**/*.py') }}
         restore-keys: |
           ${{ runner.os }}-buildozer-
 
-    # 3. Install system dependencies
-    - name: Install dependencies
+    - name: Install system dependencies
       run: |
         sudo apt update
         sudo apt install -y \
@@ -41,23 +38,42 @@ jobs:
           zip \
           unzip \
           openjdk-17-jdk \
-          autoconf \
-          libtool \
-          pkg-config \
-          zlib1g-dev
+          libffi-dev \
+          libssl-dev
 
-    # 4. Install Buildozer
     - name: Install Buildozer
       run: |
         pip install --upgrade pip
         pip install buildozer cython
 
-    # 5. Build APK
+    - name: Install Android SDK
+      run: |
+        sudo apt install -y wget tar
+        mkdir -p $HOME/android-sdk
+        cd $HOME/android-sdk
+        wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O tools.zip
+        unzip tools.zip
+        mkdir -p cmdline-tools/latest
+        mv cmdline-tools/* cmdline-tools/latest/ || true
+
+    - name: Set environment variables
+      run: |
+        echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
+        echo "PATH=$HOME/android-sdk/cmdline-tools/latest/bin:$HOME/android-sdk/platform-tools:$PATH" >> $GITHUB_ENV
+
+    - name: Accept Android licenses
+      run: yes | sdkmanager --licenses
+
+    - name: Install SDK packages
+      run: |
+        sdkmanager "platform-tools" \
+                   "platforms;android-33" \
+                   "build-tools;33.0.0"
+
     - name: Build APK
       run: |
-        buildozer android debug
+        yes | buildozer android debug
 
-    # 6. Upload APK (FIXED VERSION)
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
