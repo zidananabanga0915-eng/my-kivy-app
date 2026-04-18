@@ -26,18 +26,22 @@ jobs:
             zlib1g-dev libncurses-dev \
             libtinfo6 cmake libffi-dev \
             libssl-dev build-essential \
-            git python3-pip
+            git python3-pip \
+            libstdc++6
 
       - name: Install Buildozer
         run: |
           pip install --upgrade pip
-          pip install buildozer cython
+          pip install cython buildozer
 
       - name: Accept Android licenses
-        run: yes | sdkmanager --licenses || true
+        run: |
+          yes | sdkmanager --licenses || true
 
       - name: Build APK
-        run: buildozer android debug
+        run: |
+          buildozer android clean
+          buildozer -v android debug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
