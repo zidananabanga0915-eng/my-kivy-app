@@ -12,17 +12,30 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Clean stuck cache and Build APK
+      - name: Clean cache and Build APK
         run: |
           cd $GITHUB_WORKSPACE
           
-          # Remove the specific file that causes the "checking to merge" freeze
-          rm -f $HOME/.buildozer/android/platform/android-sdk/.temp
+          # Remove problematic cache files
+          rm -rf $HOME/.buildozer/android/platform/android-sdk/.temp
+          rm -rf $HOME/.buildozer/android/platform/android-sdk/licenses
           
+          # Build with forced license acceptance
           docker run --rm \
             -v $GITHUB_WORKSPACE:/home/user/hostcwd \
             -v $HOME/.buildozer:/home/user/.buildozer \
-            kivy/buildozer android debug
+            --entrypoint /bin/bash \
+            kivy/buildozer \
+            -c "
+              # Pre-accept all Android SDK licenses
+              mkdir -p /home/user/.buildozer/android/platform/android-sdk/licenses
+              echo -e '\n8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb78af6dfcb131a6481e\n24333f8a63b6825ea9c5514f83c2829b004d1fee' > /home/user/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
+              echo -e '\n84831b9409646a918e30573bab4c9c91346d8abd' > /home/user/.buildozer/android/platform/android-sdk/licenses/android-sdk-preview-license
+              
+              # Run buildozer
+              cd /home/user/hostcwd
+              buildozer android debug
+            "
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
